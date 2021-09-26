@@ -1,4 +1,5 @@
 #include <julia.h>
+
 #include <mex.h>
 
 #ifdef _OS_LINUX_
@@ -49,7 +50,12 @@ void mexFunction(int nl, mxArray* pl[], int nr, const mxArray* pr[])
         char *home =  nr > 2 && mxIsChar(pr[2]) ? mxArrayToString(pr[2]) : NULL;
         char *image = nr > 3 && mxIsChar(pr[3]) ? mxArrayToString(pr[3]) : NULL;
         char *lib =   nr > 4 && mxIsChar(pr[4]) ? mxArrayToString(pr[4]) : NULL;
+#ifndef _OS_WINDOWS_
+        jl_options.handle_signals = JL_OPTIONS_HANDLE_SIGNALS_OFF; // This causes errors on Windows with Julia v1.6.2 
+#else
+        jl_options_t jl_options;
         jl_options.handle_signals = JL_OPTIONS_HANDLE_SIGNALS_OFF;
+#endif
 #ifdef _OS_LINUX_
         if (!dlopen(lib, RTLD_LAZY | RTLD_GLOBAL))
         {
@@ -74,9 +80,10 @@ void mexFunction(int nl, mxArray* pl[], int nr, const mxArray* pr[])
   jl_value_t *e = jl_exception_occurred();
   if (e)
   {
-    const size_t len = 1024;
-    static char msg[len];
-    snprintf(msg, len, "Unhandled Julia exception: %s", jl_typeof_str(e));
+    //const size_t len = 1024;
+    //static char msg[len];
+    //snprintf(msg, len, "Unhandled Julia exception: %s", jl_typeof_str(e));
+    const char* msg = jl_string_ptr(jl_eval_string("sprint(showerror, ccall(:jl_exception_occurred, Any, ()))"));
     jl_exception_clear();
     mexErrMsgTxt(msg);
   }
